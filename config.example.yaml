@@ -1,0 +1,53 @@
+# This is the base folder for storing the Matrix Market files
+path: ./datasets
+
+# This is an example subfolder/category of matrices
+matrices_category_1:
+
+  # Generators configuration
+  generators:
+    # Graph500 Kronecker
+    graph500:
+      # This will generate two graphs:
+      # 1) Scale 4, Edge-factor 5
+      # 2) Scale 6, Edge-factor 10
+      scale:
+        - 4
+        - 6
+      edge_factor:
+        - 5
+        - 10
+
+  # List of matrices to be downloaded from SuiteSparse
+  # Format: "<group>/<matrix_name>"
+  suite_sparse_matrix_list:
+    - HB/ash219
+    - HB/arc130
+    - Averous/epb0
+  
+  # This allows to download matrices based on their metadata
+  # Internally, these options will be passed to the `ssgetpy` package
+  suite_sparse_matrix_range:
+    min_nnzs: 100
+    max_nnzs: 1000
+    limit: 4
+
+# This is ANOTHER example subfolder/category of matrices
+# The configuration structure is as above
+# Keys 'generators', 'suite_sparse_matrix_list' and 'suite_sparse_matrix_range' are OPTIONAL
+matrices_category_2:
+  suite_sparse_matrix_list:
+    - Simon/olafu
+
+matrices_category_3:
+  generators:
+    graph500:
+      # This will generate three graphs:
+      # 1) Scale 6, Edge-factor 5
+      # 2) Scale 8, Edge-factor 5
+      # 3) Scale 9, Edge-factor 5
+      edge_factor: 5
+      scale:
+        - 6
+        - 8
+        - 9

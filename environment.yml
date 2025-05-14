@@ -1,0 +1,38 @@
+name: dist-mmio
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - black=24.10.0
+  - brotli-python=1.0.9
+  - bzip2=1.0.8
+  - ca-certificates=2025.2.25
+  - certifi=2025.4.26
+  - charset-normalizer=3.3.2
+  - click=8.1.8
+  - idna=3.7
+  - libcxx=14.0.6
+  - libffi=3.4.4
+  - mypy_extensions=1.0.0
+  - ncurses=6.4
+  - openssl=3.0.16
+  - packaging=24.2
+  - pathspec=0.10.3
+  - pip=25.1
+  - platformdirs=4.3.7
+  - pysocks=1.7.1
+  - python=3.11.11
+  - pyyaml=6.0.2
+  - readline=8.2
+  - requests=2.32.3
+  - setuptools=78.1.1
+  - sqlite=3.45.3
+  - ssgetpy=1.0rc2
+  - tk=8.6.14
+  - tqdm=4.67.1
+  - tzdata=2025b
+  - urllib3=2.3.0
+  - wheel=0.45.1
+  - xz=5.6.4
+  - yaml=0.2.5
+  - zlib=1.2.13
