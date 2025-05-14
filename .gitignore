@@ -15,13 +15,6 @@ generators/*
 
 *_sync.sh
 
-plots/*
-
-data/
-data/*.csv
-
-mpi_test/
-
 __pycache__
 
 config.yaml
