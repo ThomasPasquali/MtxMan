@@ -29,14 +29,14 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MtxMan - simple download and generation of Matrix Market files")
     # parser.add_argument("--interactive", "-i", action="store_true", help="Starts the CLI tool that will guide you")
-    parser.add_argument("--skip", "-s", nargs="+", required=False, help="A list of 'categories' to skip")
+    parser.add_argument("--skip", "-s", nargs="+", required=False, help="A list of 'categories' to skip", default=[])
 
     # TODO implement
     parser.add_argument("--matrix-market", "-mm", action="store_true", help="If set, the script will not generate the binary '.bmtx' files")
     # TODO implement
     parser.add_argument("--keep-mtx", "-k", action="store_true", help="If set, the script will keep the '.mtx' files")
     # TODO implement
-    parser.add_argument("--keep-all-mtx", "-k", action="store_true", help="If set, the script will keep the '.mtx' files")
+    parser.add_argument("--keep-all-mtx", "-ka", action="store_true", help="If set, the script will keep the '.mtx' files")
     
     args = parser.parse_args()
 
