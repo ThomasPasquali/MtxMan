@@ -6,6 +6,7 @@ import suite_sparse_matrix_downloader
 
 def sync_all(args, config):
     matrices_paths = []
+    base_path = utils.get_datasets_dir_path(config)
     for category in config.keys():
         if category == 'path' or category in args.skip:
             continue
@@ -15,6 +16,9 @@ def sync_all(args, config):
         # FIXME graph500_generator.generate(config, category)
         matrices_paths_category += suite_sparse_matrix_downloader.download_list(config, category)
         matrices_paths_category += suite_sparse_matrix_downloader.download_range(config, category)
+        
+        # Remove base path
+        matrices_paths_category = [p[len(base_path)+1:] for p in matrices_paths_category]
 
         utils.write_mtx_summary_file(config, matrices_paths_category, category)
         matrices_paths += matrices_paths_category
