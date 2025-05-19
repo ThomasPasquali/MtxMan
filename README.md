@@ -82,3 +82,14 @@ The downloaded/generated files are structured as follows:
 ...
 └── matrices_list.txt # Summary file, contains all matrices paths
 ```
+
+> **IMPORTANT.** To minimize space requirements, run the script as
+> ```bash
+> python3 scripts/sync_datasets.py --binary-mtx
+> ```
+> This will convert `.mtx` files to `.bmtx` saving 80 to 50% disk space. The reading of `.bmtx` files is handled by [https://github.com/HicrestLaboratory/distributed_mmio](https://github.com/HicrestLaboratory/distributed_mmio). Check it out!
+> Before running make sure `distributed_mmio` git submodule is cloned
+> ```bash
+> git submodule init
+> git submodule update distributed_mmio
+> ```

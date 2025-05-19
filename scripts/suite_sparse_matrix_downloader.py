@@ -1,28 +1,81 @@
 import os
+import subprocess
 
 import ssgetpy
 import utils
 import colors
 
-def download_matrix(matrix, matrix_location):
-    matrix_url = matrix.url('MM')
-    tar_file_path = f"{matrix_location}/{matrix.name}.tar.gz"
-    os.system(f"wget -O {tar_file_path} {matrix_url}")
-    os.system(f"tar -xzf {tar_file_path} -C {matrix_location}")
+def sync_matrix(args, category_base_path, matrix):
+    full_name = f'{matrix.group}/{matrix.name}'
+    mtx_exists = os.path.isfile(f"{category_base_path}/{full_name}/{matrix.name}.mtx")
+    bmtx_exists = os.path.isfile(f"{category_base_path}/{full_name}/{matrix.name}.bmtx")
+
+    if args.binary_mtx and bmtx_exists:
+        print(f"\t\t{colors.color_yellow(full_name)} was already downloaded and converted, skipped")
+    elif not args.binary_mtx and mtx_exists:
+        print(f"\t\t{colors.color_yellow(full_name)} was already downloaded, skipped")
+    else:
+        info = ''
+        download = False
+        convert = False
+        if args.binary_mtx and mtx_exists and not bmtx_exists:
+            info = 'Converting to BMTX'
+            convert = True
+        elif not args.binary_mtx and not mtx_exists:
+            info = 'Downloading'
+            download = True
+        elif args.binary_mtx and not mtx_exists:
+            info = 'Downloading and Converting to BMTX'
+            download = True
+            convert = True
+        else:
+            raise Exception('This should not happen')
+        
+        matrix_location = os.path.join(category_base_path, matrix.group)
+        matrix_location_subfolder = os.path.join(matrix_location, matrix.name)
+        os.makedirs(matrix_location, exist_ok=True)
+        
+        print(f"\t\t{info} {colors.color_green(full_name)}")
+        print(100 * "=")
+
+        if download:
+            matrix_url = matrix.url('MM')
+            tar_file_path = f"{matrix_location}/{matrix.name}.tar.gz"
+            os.system(f"wget -O {tar_file_path} {matrix_url}")
+            os.system(f"tar -xzf {tar_file_path} -C {matrix_location}")
+        
+            # Ensure the .mtx file is in a subfolder
+            if not os.path.isdir(matrix_location_subfolder):
+                os.makedirs(matrix_location_subfolder, exist_ok=True)
+                os.rename(f"{matrix_location}/{matrix.name}.mtx", f"{matrix_location_subfolder}/{matrix.name}.mtx")
+
+            os.remove(tar_file_path)
+        
+        # Remove other .mtx files
+        if not args.keep_all_mtx:
+            for filename in os.listdir(matrix_location_subfolder):
+                file_path = os.path.join(matrix_location_subfolder, filename)
+                if filename != f"{matrix.name}.mtx" and os.path.isfile(file_path):
+                    print(f"Deleting {file_path}")
+                    os.remove(file_path)
+
+        if convert and args.binary_mtx:
+            mtx_file_path = f"{matrix_location_subfolder}/{matrix.name}.mtx"
+            mtx_to_bmtx_bin_path = os.path.join(os.path.dirname(__file__), '..', 'distributed_mmio', 'build', 'mtx_to_bmtx')
+            mtx_to_bmtx_bin_path = os.path.abspath(mtx_to_bmtx_bin_path)
+            subprocess.run([mtx_to_bmtx_bin_path, mtx_file_path] + (['-d'] if args.binary_mtx_double_vals else []))
+            if not args.keep_mtx:
+                os.remove(mtx_file_path)
+
+        print((100 * "=")+'\n')
+        return download or convert
+
+    return False
     
-    # Ensure the .mtx file is in a subfolder
-    subfolder_path = f"{matrix_location}/{matrix.name}"
-    if not os.path.isdir(subfolder_path):
-        os.makedirs(subfolder_path, exist_ok=True)
-        os.rename(f"{matrix_location}/{matrix.name}.mtx", f"{subfolder_path}/{matrix.name}.mtx")
-    
-    os.remove(tar_file_path)
 
 def read_sparse_matrix_list_config(config, category):
     if not category in config:
-        raise Exception(
-            f"{colors.color_red('category')} key is not configured properly. Refer to the config.example.yaml file"
-        )
+        raise Exception(f"{colors.color_red('category')} key is not configured properly. Refer to the config.example.yaml file")
 
     if not "suite_sparse_matrix_list" in config[category]:
         return []
@@ -30,9 +83,7 @@ def read_sparse_matrix_list_config(config, category):
     suite_sparce_matrix_list = config[category]["suite_sparse_matrix_list"]
 
     if suite_sparce_matrix_list is None:
-        raise Exception(
-            f"{colors.color_red('suite_sparse_matrix_list')} is empty. Refer to the config.example.yaml file"
-        )
+        raise Exception(f"{colors.color_red('suite_sparse_matrix_list')} is empty. Refer to the config.example.yaml file")
 
     processed_suite_sparse_matrix_list = []
 
@@ -40,68 +91,46 @@ def read_sparse_matrix_list_config(config, category):
         if isinstance(group_and_name, str):
             parts = group_and_name.split("/")
             if len(parts) == 2:
-                processed_suite_sparse_matrix_list.append(
-                    (group_and_name, parts[0], parts[1])
-                )
+                processed_suite_sparse_matrix_list.append((group_and_name, parts[0], parts[1]))
             else:
-                print(
-                    f"{colors.color_red(group_and_name)} has an invalid format. Refer to the config.example.yaml file"
-                )
+                print(f"{colors.color_red(group_and_name)} has an invalid format. Refer to the config.example.yaml file")
 
     return processed_suite_sparse_matrix_list
 
 
-def download_list(config, category)-> list[str]:
-    processed_suite_sparse_matrix_list = read_sparse_matrix_list_config(config, category)
+def download_list(args, config, category)-> dict[str, str]:
+    suite_sparse_matrix_list = read_sparse_matrix_list_config(config, category)
     error_matrices = []
-    matrices_paths = []
+    matrices_paths = {}
 
     utils.create_datasets_dir(config, category)
     datasets_dir_path = utils.get_datasets_dir_path(config)
 
-    for full_name, group_name, matrix_name in processed_suite_sparse_matrix_list:
+    for full_name, group_name, matrix_name in suite_sparse_matrix_list:
         print(f"\tChecking matrix: {full_name}")
 
-        matrices = ssgetpy.search(name=matrix_name, limit=3000)
+        matrices = ssgetpy.search(name=matrix_name, limit=1)
 
         if not matrices:
-            print(
-                f"\t\t{colors.color_red(full_name)} not found in SuiteSparse, skipped"
-            )
+            print(f"\t\t{colors.color_red(full_name)} not found in SuiteSparse, skipped")
             error_matrices.append(full_name)
             continue
 
         found = False
-        for matrix in matrices:
-            if matrix.name == matrix_name:
-                matrix_location = f"{datasets_dir_path}/{category}/{group_name}"
-                if os.path.isdir(f"{datasets_dir_path}/{category}/{full_name}"):
-                    print(
-                        f"\t\t{colors.color_yellow(full_name)} was already downloaded, skipped"
-                    )
-                else:
-                    os.makedirs(matrix_location, exist_ok=True)
-                    print(f"\t\tDownloading {colors.color_green(full_name)}")
-                    print(100 * "=")
-                    # This is slow... matrix.download(destpath=matrix_location, extract=True)
-                    download_matrix(matrix, matrix_location)
-                    print(100 * "=")
-
-                matrices_paths.append(f'{matrix_location}/{matrix_name}/{matrix_name}.mtx')
-                found = True
-                break
+        matrix = matrices[0]
+        if matrix.name == matrix_name:
+            matrix_location = f"{datasets_dir_path}/{category}/{group_name}"
+            # This is slow... matrix.download(destpath=matrix_location, extract=True)
+            sync_matrix(args, f"{datasets_dir_path}/{category}", matrix)
+            matrices_paths[f"{matrix.group}/{matrix.name}"] = f'{matrix_location}/{matrix_name}/{matrix_name}.{"bmtx" if args.binary_mtx else "mtx"}'
+            found = True
 
         if not found:
-            print(
-                f"{colors.color_red('matrix_name')} returned, but exact match not found"
-            )
+            print(f"{colors.color_red('matrix_name')} returned, but exact match not found")
             error_matrices.append(matrix_name)
 
     if error_matrices:
-        print()
-        print(
-            f"{colors.color_red('Error')}: The following matrices were not found or mismatched:"
-        )
+        print(f"\n{colors.color_red('Error')}: The following matrices were not found or mismatched:")
         for m in error_matrices:
             print(f"\t{m}")
     else:
@@ -163,21 +192,19 @@ def read_sparse_matrix_range_config(config, category):
     return (min_nnzs, max_nnzs, limit)
 
 
-def download_range(config, category) -> list[str]:
+def download_range(args, config, category) -> dict[str, str]:
     mtx_range = read_sparse_matrix_range_config(config, category)
 
     if not mtx_range:
-        return []
+        return {}
     (min_nnzs, max_nnzs, limit) = mtx_range
 
     matrices = ssgetpy.fetch(nzbounds=(min_nnzs, max_nnzs), limit=limit, dry_run=True)
     skipped_matrices = []
-    matrices_paths = []
+    matrices_paths = {}
 
     if not matrices:
-        raise Exception(
-            f"{colors.color_red('Error')} : matrices with min_nnzs: {min_nnzs}, max_nnzs: {max_nnzs}, limit: {limit} were not found in SuiteSparse"
-        )
+        raise Exception(f"{colors.color_red('Error')} : matrices with min_nnzs: {min_nnzs}, max_nnzs: {max_nnzs}, limit: {limit} were not found in SuiteSparse")
 
     utils.create_datasets_dir(config, category)
     datasets_dir_path = utils.get_datasets_dir_path(config)
@@ -186,22 +213,13 @@ def download_range(config, category) -> list[str]:
     for matrix in matrices:
         matrix_location = f"{datasets_dir_path}/{category}/{matrices_dir_name}/{matrix.group}"
         full_name = f"{matrix.group}/{matrix.name}"
-        if os.path.isdir(f"{matrix_location}/{matrix.name}"):
-            print(f"\t\t{colors.color_yellow(full_name)} was already downloaded, skipped")
-            skipped_matrices.append(full_name)
-        else:
-            os.makedirs(matrix_location, exist_ok=True)
-            print(f"\t\tDownloading {colors.color_green(full_name)}")
-            print(100 * "=")
-            # This is slow... matrix.download(destpath=matrix_location, extract=True)
-            download_matrix(matrix, matrix_location)
-            print(100 * "=")
-        
-        matrices_paths.append(f'{matrix_location}/{matrix.name}/{matrix.name}.mtx')
+        # This is slow... matrix.download(destpath=matrix_location, extract=True)
+        if not sync_matrix(args, f"{datasets_dir_path}/{category}/{matrices_dir_name}", matrix):
+            skipped_matrices.append(full_name)   
+        matrices_paths[full_name] = f'{matrix_location}/{matrix.name}.{"bmtx" if args.binary_mtx else "mtx"}'
 
     if skipped_matrices:
-        print()
-        print(f"{colors.color_yellow('Warning')}: The following matrices were skipped:")
+        print(f"\n{colors.color_yellow('Warning')}: The following matrices were skipped:")
         for full_name in skipped_matrices:
             print(f"\t{full_name}")
     else:
