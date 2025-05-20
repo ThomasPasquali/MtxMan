@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    fprintf(f, "%%%%MatrixMarket matrix coordinate integer general\n");
+    fprintf(f, "%%%%MatrixMarket matrix coordinate pattern general\n");
     fprintf(f, "%% File generated with MtxMan.\n");
     fprintf(f, "%% Scale: %d\n", scale);
     fprintf(f, "%% Edge factor: %d\n", edge_factor);
@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
     for (int64_t i = 0; i < nedges; ++i) {
         int64_t src = get_v0_from_edge(&edges[i]) + 1;  // 1-based indexing
         int64_t dst = get_v1_from_edge(&edges[i]) + 1;
-        fprintf(f, "%ld %ld 1\n", src, dst);
+        fprintf(f, "%ld %ld\n", src, dst);
     }
     fclose(f);
     free(edges);
