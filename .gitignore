@@ -8,8 +8,6 @@ bin/*
 obj/*
 datasets/
 
-generators/*
-
 *build/
 *_build/
 

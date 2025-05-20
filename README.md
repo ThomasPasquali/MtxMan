@@ -38,7 +38,7 @@ pip install -r requirements.txt
 
 ## Generators
 
-If you want to use the `graph500` generator then you should have the `MPICH` library in order to compile and run the executable that generates graphs.
+If you want to use the `graph500` generator then you should have the `gcc` available on your system.
 
 ## Dataset download/generation
 
