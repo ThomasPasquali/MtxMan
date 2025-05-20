@@ -3,6 +3,7 @@ import utils
 import colors
 import graph500_generator
 import suite_sparse_matrix_downloader
+from collections import defaultdict
 
 def sync_all(args, config):
     matrices_paths = []
@@ -14,13 +15,17 @@ def sync_all(args, config):
 
         print(colors.color_green(f'\n>> Syncing "{category}"...'))
 
-        # FIXME graph500_generator.generate(config, category)
+        matrices_paths_category_dd = defaultdict(list)
+        for d in [
+            graph500_generator.generate(args, config, category),
+            suite_sparse_matrix_downloader.download_list(args, config, category),
+            suite_sparse_matrix_downloader.download_range(args, config, category)
+        ]:
+            for k, v in d.items():
+                matrices_paths_category_dd[k].append(v)
 
-        matrices_paths_category |= suite_sparse_matrix_downloader.download_list(args, config, category)
-        matrices_paths_category |= suite_sparse_matrix_downloader.download_range(args, config, category)
-        
-        # Remove base path
-        matrices_paths_category = [p[len(base_path)+1:] for p in matrices_paths_category.values()]
+        matrices_paths_category = dict(matrices_paths_category_dd)
+        matrices_paths_category = [item[len(base_path)+1:] for sublist in matrices_paths_category.values() for item in sublist]
 
         utils.write_mtx_summary_file(config, matrices_paths_category, category)
         matrices_paths += matrices_paths_category

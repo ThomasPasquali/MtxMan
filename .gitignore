@@ -14,6 +14,7 @@ generators/*
 *_build/
 
 *_sync.sh
+*.csv
 
 __pycache__
 

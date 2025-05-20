@@ -19,9 +19,7 @@ def read_config_file():
 
 def create_datasets_dir(config, category):
     if not "path" in config:
-        raise Exception(
-            f"{colors.color_red('path')} key is required. Refer to the config.example.yaml file"
-        )
+        raise Exception(f"{colors.color_red('path')} key is required. Refer to the config.example.yaml file")
 
     data_dir_path = f'{config["path"]}/{category}'
     os.makedirs(data_dir_path, exist_ok=True)

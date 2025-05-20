@@ -216,7 +216,7 @@ def download_range(args, config, category) -> dict[str, str]:
         # This is slow... matrix.download(destpath=matrix_location, extract=True)
         if not sync_matrix(args, f"{datasets_dir_path}/{category}/{matrices_dir_name}", matrix):
             skipped_matrices.append(full_name)   
-        matrices_paths[full_name] = f'{matrix_location}/{matrix.name}.{"bmtx" if args.binary_mtx else "mtx"}'
+        matrices_paths[full_name] = f'{matrix_location}/{matrix.name}/{matrix.name}.{"bmtx" if args.binary_mtx else "mtx"}'
 
     if skipped_matrices:
         print(f"\n{colors.color_yellow('Warning')}: The following matrices were skipped:")

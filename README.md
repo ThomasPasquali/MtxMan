@@ -93,3 +93,14 @@ The downloaded/generated files are structured as follows:
 > git submodule init
 > git submodule update distributed_mmio
 > ```
+
+
+## Utilities 
+
+Once you have downloaded/generated your matrices, you can generate a CSV containing all your matrices metadata.
+
+> This will only add matrices from SuiteSparse.
+
+```bash
+utils/get_mtx_metadata.sh # This will generate the matrix_info.csv file
+```

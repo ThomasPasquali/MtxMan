@@ -21,19 +21,13 @@ def unset_env():
 
 def read_graph_500_config(config, category):
     if not category in config:
-        raise Exception(
-            f"{colors.color_red('category')} key is not configured properly. Refer to the config.example.yaml file"
-        )
+        raise Exception(f"{colors.color_red('category')} key is not configured properly. Refer to the config.example.yaml file")
 
     if not "generators" in config[category]:
-        raise Exception(
-            f"{colors.color_red('generators')} key is not configured properly. Refer to the config.example.yaml file"
-        )
+        return ([],[])
 
     if not "graph500" in config[category]["generators"]:
-        raise Exception(
-            f"{colors.color_red('graph500')} key is not configured properly. Refer to the config.example.yaml file"
-        )
+        raise Exception(f"{colors.color_red('graph500')} key is not configured properly. Refer to the config.example.yaml file")
 
     graph_500_config = config[category]["generators"]["graph500"]
 
@@ -62,57 +56,102 @@ def read_graph_500_config(config, category):
         )
 
 
-def generate(config, category):
+def generate(args, config, category):
+    matrices_paths = {}
+
     graph500_dir_path = "generators/graph500"
-    if not os.listdir(graph500_dir_path):
-        raise Exception(
-            "graph 500 submodule is required: remember to run 'git submodule update --init --recursive'"
+    graph500_gen_dir_path = f'{graph500_dir_path}/generator'
+    graph500_gen_main_filename = 'graph500_generator_main.c'
+
+    if not os.path.isdir(graph500_dir_path):
+        raise Exception("graph 500 submodule is required: remember to run 'git submodule update --init --recursive'")
+
+    if not os.path.isfile(os.path.join(graph500_gen_dir_path, graph500_gen_main_filename)):
+        shutil.copy2(
+            os.path.join("generators", "custom", graph500_gen_main_filename),
+            os.path.join(graph500_gen_dir_path, graph500_gen_main_filename)
         )
 
+    try:
+        print(f"Compiling graph500 generator...")
+        subprocess.run((f'gcc -O3 -I ./ -o graph500_gen {graph500_gen_main_filename} make_graph.c splittable_mrg.c graph_generator.c utils.c -lm -w').split(), cwd=graph500_gen_dir_path, check=True)
+        print(f"Graph500 Generator compiled!")
+    except subprocess.CalledProcessError as e:
+        print(f"Compilation failed: {e}")
+        sys.exit(1)
+
     (scales, edge_factors) = read_graph_500_config(config, category)
+    utils.create_datasets_dir(config, category)
 
     for scale, edge_factor in zip(scales, edge_factors):
         file_name = f"graph500_{scale}_{edge_factor}"
-        set_env(file_name)
-
-        working_dir_path = f"{graph500_dir_path}/src"
-
-        try:
-            print(f"Start compiling graph500_reference_bfs...")
-            print()
-            subprocess.run(
-                ["make", "graph500_reference_bfs"], cwd=working_dir_path, check=True
-            )
-            print()
-        except subprocess.CalledProcessError as e:
-            print(f"Compilation failed: {e}")
-            sys.exit(1)
-
-        try:
-            print(
-                f"Start generating a graph with {colors.color_green(f'(scale, edge factor) = ({scale}, {edge_factor})')}"
-            )
-            print()
-            subprocess.run(
-                ["mpirun", "./graph500_reference_bfs", f"{scale}", f"{edge_factor}"],
-                cwd=working_dir_path,
-                check=True,
-            )
-            print()
-        except subprocess.CalledProcessError as e:
-            print(f"Graph generation failed: {e}")
-            sys.exit(1)
-
-        utils.create_datasets_dir(config, category)
-        unset_env()
-
         data_dir_path = utils.get_datasets_dir_path(config)
-        source_path = f"{working_dir_path}/{file_name}"
-        destination_path = f"{data_dir_path}/{file_name}"
+        destination_path = os.path.join(data_dir_path, category, 'Graph500')
+        os.makedirs(destination_path, exist_ok=True)
+        destination_path = os.path.join(destination_path, file_name)
+        destination_path_mtx = f"{destination_path}.mtx"
+        destination_path_bmtx = f"{destination_path}.bmtx"
 
-        print(colors.color_green(f"Graph generated in {source_path}"))
-        print(colors.color_green(f"Copying to {destination_path}"))
+        mtx_exists = os.path.isfile(destination_path_mtx)
+        bmtx_exists = os.path.isfile(destination_path_bmtx)
 
-        # if the file is big then it will take a long time to move, so it is safer to copy it first so that, if the copy operation fails, we can repeat the copy operation later and then delete it
-        shutil.copy2(source_path, destination_path)
-        os.remove(source_path)
+        file_name += '.bmtx' if args.binary_mtx else '.mtx'
+        destination_path = os.path.join(data_dir_path, category, 'Graph500', file_name)
+        destination_path = os.path.abspath(destination_path)
+        destination_path_mtx = os.path.abspath(destination_path_mtx)
+        destination_path_bmtx = os.path.abspath(destination_path_bmtx)
+
+        if args.binary_mtx and bmtx_exists:
+            print(f"\t\t{colors.color_yellow(file_name)} was already generated and converted, skipped")
+        elif not args.binary_mtx and mtx_exists:
+            print(f"\t\t{colors.color_yellow(file_name)} was already generated, skipped")
+        else:
+            info = ''
+            generate = False
+            convert = False
+            if args.binary_mtx and mtx_exists and not bmtx_exists:
+                info = 'Converting to BMTX'
+                convert = True
+            elif not args.binary_mtx and not mtx_exists:
+                info = 'Generating'
+                generate = True
+            elif args.binary_mtx and not mtx_exists:
+                info = 'Generating and Converting to BMTX'
+                generate = True
+                convert = True
+            else:
+                raise Exception('This should not happen')
+            
+            print(f"\t\t{info} {colors.color_green(file_name)}")
+            print(100 * "=")
+
+            if generate:
+                set_env(file_name)  # This is probably not needed anymore
+                try:
+                    print(f"Generating Graph500 graph with {colors.color_green(f'(scale, edge factor) = ({scale}, {edge_factor})')}")
+                    subprocess.run(['./graph500_gen', str(scale), str(edge_factor), str(destination_path_mtx)], cwd=graph500_gen_dir_path, check=True)
+                except subprocess.CalledProcessError as e:
+                    print(f"Graph generation failed: {e}")
+                    unset_env()
+                    continue
+                unset_env()
+                print('Generated!')
+
+            if convert and args.binary_mtx:
+                mtx_to_bmtx_bin_path = os.path.join(os.path.dirname(__file__), '..', 'distributed_mmio', 'build', 'mtx_to_bmtx')
+                mtx_to_bmtx_bin_path = os.path.abspath(mtx_to_bmtx_bin_path)
+                subprocess.run([mtx_to_bmtx_bin_path, destination_path_mtx] + (['-d'] if args.binary_mtx_double_vals else []))
+                if not args.keep_mtx:
+                    os.remove(destination_path_mtx)
+
+            print((100 * "=")+'\n')
+
+            # source_path = os.path.join(graph500_gen_dir_path, file_name)
+            # print(colors.color_green(f"Graph generated in {source_path}"))
+            # print(colors.color_green(f"Copying to {destination_path}"))
+            # shutil.copy2(source_path, destination_path)
+            # os.remove(source_path)
+
+        matrices_paths[(scale, edge_factor)] = str(os.path.join(data_dir_path, category, 'Graph500', file_name))
+        
+    return matrices_paths
