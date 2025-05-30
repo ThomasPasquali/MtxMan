@@ -18,6 +18,25 @@ matrices_category_1:
         - 5
         - 10
 
+    # PaRMAT generator
+    parmat:
+    # Parameters:
+    # N - Number of veritces
+    # M - Number of edges
+    # a,b,c - RMAT probabilities. "d" will be deduced automatically. (defaulf: a,b,c=0.25)
+    # noDuplicateEdges, undirected, noEdgeToSelf, sorted - Flags. To enable a flag, please set it to 1. (default: 0)
+      defaults: # This is optional
+        N: 32
+        a: 0.25
+        b: 0.25
+        c: 0.25
+        undirected: 1
+        noDuplicateEdges: 1
+      matrices: # Specify the list of matrices. Default parametes can be overwritten
+        - { M: 64 }
+        - { M: 128 }
+        - { N: 64, M: 64, a: 0.7, b: 0.1, c: 0.1, noEdgeToSelf: 1 } # Overriding defaults
+
   # List of matrices to be downloaded from SuiteSparse
   # Format: "<group>/<matrix_name>"
   suite_sparse_matrix_list:
