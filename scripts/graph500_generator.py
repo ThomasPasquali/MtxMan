@@ -23,11 +23,8 @@ def read_graph_500_config(config, category):
     if not category in config:
         raise Exception(f"{colors.color_red('category')} key is not configured properly. Refer to the config.example.yaml file")
 
-    if not "generators" in config[category]:
+    if "generators" not in config[category] or "graph500" not in config[category]["generators"]:
         return ([],[])
-
-    if not "graph500" in config[category]["generators"]:
-        raise Exception(f"{colors.color_red('graph500')} key is not configured properly. Refer to the config.example.yaml file")
 
     graph_500_config = config[category]["generators"]["graph500"]
 
@@ -64,7 +61,7 @@ def generate(args, config, category):
     graph500_gen_main_filename = 'graph500_generator_main.c'
 
     if not os.path.isdir(graph500_dir_path):
-        raise Exception("graph 500 submodule is required: remember to run 'git submodule update --init --recursive'")
+        raise Exception("graph500 submodule is required: remember to run 'git submodule update --init --recursive'")
 
     if not os.path.isfile(os.path.join(graph500_gen_dir_path, graph500_gen_main_filename)):
         shutil.copy2(

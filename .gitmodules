@@ -4,3 +4,6 @@
 [submodule "distributed_mmio"]
 	path = distributed_mmio
 	url = git@github.com:HicrestLaboratory/distributed_mmio.git
+[submodule "generators/PaRMAT"]
+	path = generators/PaRMAT
+	url = https://github.com/farkhor/PaRMAT.git

@@ -2,6 +2,7 @@ import argparse
 import utils
 import colors
 import graph500_generator
+import parmat_generator
 import suite_sparse_matrix_downloader
 from collections import defaultdict
 
@@ -17,6 +18,7 @@ def sync_all(args, config):
 
         matrices_paths_category_dd = defaultdict(list)
         for d in [
+            parmat_generator.generate(args, config, category),
             graph500_generator.generate(args, config, category),
             suite_sparse_matrix_downloader.download_list(args, config, category),
             suite_sparse_matrix_downloader.download_range(args, config, category)

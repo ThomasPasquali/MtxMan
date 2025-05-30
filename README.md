@@ -5,6 +5,7 @@ This is a utility repository that simplifies the download and generation of Matr
 * Files are downloaded from `SuiteSparse` (https://sparse.tamu.edu/)
 * Supported generators:
     * `Graph500` (Kronecker graphs)
+    * `PaRMAT` (Customizable RMATs)
 
 ## Cloning
 
