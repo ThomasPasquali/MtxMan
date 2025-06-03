@@ -1,15 +1,16 @@
 import os
+from typing import Any
 import colors
 import subprocess
 
 import utils
 
-def read_parmat_config(config, category):
+def read_parmat_config(config, category) -> tuple[dict[str,Any], list[dict[str,Any]]]:
     if not category in config:
         raise Exception(f"{colors.color_red('category')} key is not configured properly. Refer to the config.example.yaml file")
 
     if "generators" not in config[category] or "parmat" not in config[category]["generators"]:
-        return ([],[])
+        return ({},[])
 
     parmat_config = config[category]["generators"]["parmat"]
 
@@ -24,14 +25,15 @@ def generate(args, config, category) -> dict:
 
     if not os.path.isdir(parmat_dir_path):
         raise Exception("PaRMAT submodule is required: remember to run 'git submodule update --init --recursive'")
-
-    try:
-        print(f"Compiling PaRMAT generator...")
-        subprocess.run('make', cwd=parmat_gen_dir_path, check=True)
-        print(f"PaRMAT Generator compiled!")
-    except subprocess.CalledProcessError as e:
-        print(f"Compilation failed: {e}")
-        exit(1)
+    
+    if not os.path.isfile(f'{parmat_gen_dir_path}/PaRMAT'):
+        try:
+            print(f"Compiling PaRMAT generator...")
+            subprocess.run('make', cwd=parmat_gen_dir_path, check=True)
+            print(f"PaRMAT Generator compiled!")
+        except subprocess.CalledProcessError as e:
+            print(f"Compilation failed: {e}")
+            exit(1)
 
     defaults, matrices = read_parmat_config(config, category)
     utils.create_datasets_dir(config, category)
@@ -44,10 +46,10 @@ def generate(args, config, category) -> dict:
             raise Exception(f'Invalid PaRMAT configuration: N and M are required (not available in "{mtx_config}")')
         if ('a' in mtx_config or 'b' in mtx_config or 'c' in mtx_config) and not ('a' in mtx_config and 'b' in mtx_config and 'c' in mtx_config):
             raise Exception(f'Invalid PaRMAT configuration: You must either set all "a,b,c" or none of them ("{mtx_config}")')
-        noDuplicateEdges = mtx_config.get('noDuplicateEdges', False)
-        undirected = mtx_config.get('undirected', False)
-        noEdgeToSelf = mtx_config.get('noEdgeToSelf', False)
-        sorted = mtx_config.get('sorted', False)
+        noDuplicateEdges = mtx_config.get('noDuplicateEdges', 0) == 1
+        undirected = mtx_config.get('undirected', 0) == 1
+        noEdgeToSelf = mtx_config.get('noEdgeToSelf', 0) == 1
+        sorted = mtx_config.get('sorted', 0) == 1
         mtx_config['noDuplicateEdges'] = noDuplicateEdges
         mtx_config['undirected'] = undirected
         mtx_config['noEdgeToSelf'] = noEdgeToSelf
@@ -79,6 +81,9 @@ def generate(args, config, category) -> dict:
         data_dir_path = utils.get_datasets_dir_path(config)
         destination_path = os.path.join(data_dir_path, category, 'PaRMAT')
         os.makedirs(destination_path, exist_ok=True)
+
+        print(f"\tChecking matrix: {file_name}")
+
         destination_path = os.path.join(destination_path, file_name)
         destination_path_mtx = f"{destination_path}.mtx"
         destination_path_bmtx = f"{destination_path}.bmtx"

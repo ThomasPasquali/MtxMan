@@ -69,13 +69,14 @@ def generate(args, config, category):
             os.path.join(graph500_gen_dir_path, graph500_gen_main_filename)
         )
 
-    try:
-        print(f"Compiling graph500 generator...")
-        subprocess.run((f'gcc -O3 -I ./ -o graph500_gen {graph500_gen_main_filename} make_graph.c splittable_mrg.c graph_generator.c utils.c -lm -w').split(), cwd=graph500_gen_dir_path, check=True)
-        print(f"Graph500 Generator compiled!")
-    except subprocess.CalledProcessError as e:
-        print(f"Compilation failed: {e}")
-        sys.exit(1)
+    if not os.path.isfile(f'{graph500_gen_dir_path}/graph500_gen'):
+        try:
+            print(f"Compiling graph500 generator...")
+            subprocess.run((f'gcc -O3 -I ./ -o graph500_gen {graph500_gen_main_filename} make_graph.c splittable_mrg.c graph_generator.c utils.c -lm -w').split(), cwd=graph500_gen_dir_path, check=True)
+            print(f"Graph500 Generator compiled!")
+        except subprocess.CalledProcessError as e:
+            print(f"Compilation failed: {e}")
+            sys.exit(1)
 
     (scales, edge_factors) = read_graph_500_config(config, category)
     utils.create_datasets_dir(config, category)
