@@ -1,4 +1,5 @@
 import os
+import re
 from typing import Any
 import colors
 import subprocess
@@ -129,10 +130,18 @@ def generate(args, config, category) -> dict:
                     subprocess.run(cli_args, cwd=parmat_gen_dir_path, check=True)
                     with open(destination_path_mtx, 'r+') as f:
                         content = f.read()
+                        lines = content.split('\n')
+                        coords = []
+                        for line in lines:
+                            line = re.sub(r'\s+', ' ', line)
+                            rc = line.split(' ')
+                            if len(rc) == 2:
+                                r, c = rc
+                                coords.append(f'{int(r)+1} {int(c)+1}')
                         f.seek(0, 0)
                         f.write('%%MatrixMarket matrix coordinate pattern general\n')
                         f.write(f'{N} {N} {M}\n')
-                        f.write(content)
+                        f.write('\n'.join(coords))
                 except subprocess.CalledProcessError as e:
                     print(f"Graph generation failed: {e}")
                     continue
