@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mtxman"
+version = "0.0.1"
+authors = [
+  { name="Thomas Pasquali", email="thomas.pasquali@unitn.it" }
+]
+description = "A utility that simplifies the download and generation of Matrix Market (`.mtx`) files."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+dependencies = [
+  "typer[all]",
+  "rich",
+  "PyYAML",
+  "ssgetpy",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ThomasPasquali/MtxMan"
+"Bug Tracker" = "https://github.com/ThomasPasquali/MtxMan/issues"
+
+[project.scripts]
+mtxman = "mtxman.cli:app"

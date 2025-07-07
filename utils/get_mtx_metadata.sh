@@ -12,7 +12,7 @@ while IFS= read -r file; do
     prev_dir=$(basename "$(dirname "$file")")
     prev_prev_dir=$(basename "$(dirname "$(dirname "$file")")")
 
-    if [[ $prev_dir == "Graph500" ]]; then
+    if [[ $prev_dir == "Graph500" || $prev_dir == "PaRMAT" ]]; then
         echo "Skipping $file"
         continue
     fi
