@@ -1,78 +1,185 @@
-# MtxMan
+# MtxMan 🔢
 
-This is a utility repository that simplifies the download and generation of Matrix Market (`.mtx`) files.
+This is a utility that simplifies the download and generation of Matrix Market (`.mtx`) files.
 
 * Files are downloaded from `SuiteSparse` (https://sparse.tamu.edu/)
 * Supported generators:
-    * `Graph500` (Kronecker graphs)
-    * `PaRMAT` (Customizable RMATs)
+    * [Graph500](https://github.com/graph500/graph500) (Kronecker graphs)
+    * [PaRMAT](https://github.com/farkhor/PaRMAT) (Customizable RMATs)
 
-## Cloning
+## Requirements
 
-To clone this repo with all the git submodules initialized run the following command
+- `gcc`: to build dependencies:
+    - `distributed_mmio` to convert matrices to BMTX format.
+    - `Graph500` and `PaRMAT` generators.
+- `python3`/`pip`/`pipx` to download and setup MtxMan.
 
-```
-git clone --recurse-submodules https://github.com/HicrestLaboratory/distributed_mmio.git
-```
+## Setup
 
-If you already cloned the repo and initialize recursively the submodules
+First, setup you Python environment (if needed).
 
-```
-git submodule update --init --recursive
-```
-
-## Python Environment
-
-If `conda` is available on your system, all the required packages and configuration are in the `environment.yml` file. Just run:
+### Virtual Environment Setup
 
 ```bash
-conda env create -f environment.yml
-```
-
-Alternatively, use `pip`:
-
-```bash
+# If you don't already have one, create and activate a venv
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+
+pip install pipx
+pipx ensurepath
 ```
 
-## Generators
+You may need to restart your terminal for the changes to take effect.
 
-If you want to use the `graph500` generator then you should have the `gcc` available on your system.
+## MtxMan Installation
 
-## Dataset download/generation
+Once `pipx` is installed, you can install MtxMan from [PyPI](https://pypi.org/project/mtxman/):
 
-Once the environment is ready, it is time to customize the condiguration file.
+```bash
+# Install MtxMan CLI
+pipx install mtxman
+```
 
-1) Create your own `config.yaml` file (based on the `config.example.yaml` format)
+Great, you now have MtxMan installed! You can check out the available commands by running:
+
+```bash
+mtxman --help
+```
+
+## Developer Installation
+
+```bash
+# Clone the repository
+git clone git@github.com:ThomasPasquali/MtxMan.git
+cd MtxMan
+# Install the project in editable mode
+pip install -e .
+```
+
+Now the `mtxman` command should use the local version of the package.  
+Any changes you make to the code will be reflected immediately when you run the command.
+
+## Usage: matrices download/generation
+
+Once you have the MtxMan available on your system.
+
+1) Create your own YAML configuration file (check out the example below for the syntax)
 2) Run the following command:
 
 ```bash
-python3 scripts/sync_datasets.py
+mtxman sync <your_config_file>.yaml
 ```
 
 By default this command will download/generate all the configured matrices.
 
-For more details, run the script with the `-h` or `--help` flag.
+For more details, run `mtxman sync --help`.
+
+### Example Configuration File
+
+```yaml
+# This is the base folder for storing the Matrix Market files
+path: ./datasets
+
+# This is an example subfolder/category of matrices
+matrices_category_1:
+
+  # Generators configuration
+  generators:
+    # Graph500 Kronecker
+    graph500:
+      # This will generate two graphs:
+      # 1) Scale 4, Edge-factor 5
+      # 2) Scale 6, Edge-factor 10
+      scale:
+        - 4
+        - 6
+      edge_factor:
+        - 5
+        - 10
+
+    # PaRMAT generator
+    parmat:
+    # Parameters:
+    # N - Number of veritces
+    # M - Number of edges
+    # a,b,c - RMAT probabilities. "d" will be deduced automatically. (defaulf: a,b,c=0.25)
+    # noDuplicateEdges, undirected, noEdgeToSelf, sorted - Flags. To enable a flag, please set it to 1. (default: 0)
+      defaults: # This is optional
+        N: 32
+        a: 0.25
+        b: 0.25
+        c: 0.25
+        undirected: 1
+        noDuplicateEdges: 1
+      matrices: # Specify the list of matrices. Default parametes can be overwritten
+        - { M: 64 }
+        - { M: 128 }
+        - { N: 64, M: 64, a: 0.7, b: 0.1, c: 0.1, noEdgeToSelf: 1 } # Overriding defaults
+
+  # List of matrices to be downloaded from SuiteSparse
+  # Format: "<group>/<matrix_name>"
+  suite_sparse_matrix_list:
+    - HB/ash219
+    - HB/arc130
+    - Averous/epb0
+  
+  # This allows to download matrices based on their metadata
+  # Internally, these options will be passed to the `ssgetpy` package
+  suite_sparse_matrix_range:
+    min_nnzs: 100
+    max_nnzs: 1000
+    limit: 4
+
+# This is ANOTHER example subfolder/category of matrices
+# The configuration structure is as above
+# Keys 'generators', 'suite_sparse_matrix_list' and 'suite_sparse_matrix_range' are OPTIONAL
+matrices_category_2:
+  suite_sparse_matrix_list:
+    - Simon/olafu
+
+matrices_category_3:
+  generators:
+    graph500:
+      # This will generate three graphs:
+      # 1) Scale 6, Edge-factor 5
+      # 2) Scale 8, Edge-factor 5
+      # 3) Scale 9, Edge-factor 5
+      edge_factor: 5
+      scale:
+        - 6
+        - 8
+        - 9
+```
+
+## Files Structure
 
 The downloaded/generated files are structured as follows:
 
 ```bash
 <config.path>
 ├── <category_0>
-│   ├── <group_0> # Matrices from SuiteSparse "list"
+│   ├── <SuiteSparse_group_0> # Matrices from SuiteSparse "list"
 │   │   └── <matrix_0>
 │   │       └── <matrix_0>.mtx
-│   ├── <group_1>
+│   ├── <SuiteSparse_group_1>
 │   │   ├── <matrix_0>
 │   │   │   └── <matrix_0>.mtx
 │   │   └── <matrix_1>
 │   │       └── <matrix_1>.mtx
 |   ...
 |   |
+|   ├── Graph500
+│   │   ├── graph500_<scale_0>_<edge_factor0>
+│   │   ├── graph500_<scale_1>_<edge_factor1>
+│   │   ...
+|   |
+|   ├── PaRMAT
+│   │   ├── parmat_N<N_0>_M<M_0>_<other parmat parameters 0>
+│   │   ├── parmat_N<N_1>_M<M_1>_<other parmat parameters 1>
+│   │   ...
+|   |
 │   └── SuiteSparse_<min_nnz>_<max_nnz>_<limit> # Matrices from SuiteSparse "range"
-|   │   ├── <group_0> # Matrices from SuiteSparse "list"
+|   │   ├── <SuiteSparse_group_0> # Matrices from SuiteSparse "list"
 |   │   │   └── <matrix_0>
 |   │   │       └── <matrix_0>.mtx
 |   |   ...
@@ -82,26 +189,15 @@ The downloaded/generated files are structured as follows:
 |   ... # Same structure
 ...
 └── matrices_list.txt # Summary file, contains all matrices paths
+└── matrices_metadata.csv # Summary file, contains all matrices metadata (number of rows, columns, non-zeros etc.)
 ```
 
-> **IMPORTANT.** To minimize space requirements, run the script as
-> ```bash
-> python3 scripts/sync_datasets.py --binary-mtx
-> ```
-> This will convert `.mtx` files to `.bmtx` saving 80 to 50% disk space. The reading of `.bmtx` files is handled by [https://github.com/HicrestLaboratory/distributed_mmio](https://github.com/HicrestLaboratory/distributed_mmio). Check it out!
-> Before running make sure `distributed_mmio` git submodule is cloned
-> ```bash
-> git submodule init
-> git submodule update distributed_mmio
-> ```
+## Optimize Required Disk Space and Read Time
 
-
-## Utilities 
-
-Once you have downloaded/generated your matrices, you can generate a CSV containing all your matrices metadata.
-
-> This will only add matrices from SuiteSparse.
-
+To optimize space requirements, run the `sync` command as follows:
 ```bash
-utils/get_mtx_metadata.sh # This will generate the matrix_info.csv file
+mtxman sync <your_config_file>.yaml --binary-mtx
 ```
+
+This will convert `.mtx` files to `.bmtx` saving 50 to 80% disk space.  
+The reading of `.bmtx` files is handled by [https://github.com/HicrestLaboratory/distributed_mmio](https://github.com/HicrestLaboratory/distributed_mmio). Check it out!

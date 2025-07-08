@@ -1,19 +1,26 @@
+# Environment
 .vscode
 .venv
 
+# CMake
 CMakeFiles/
 CMakeCache.txt
 
 bin/*
 obj/*
-datasets/
-
 *build/
 *_build/
 
+# Python
+*__pycache__/
+src/mtxman.egg-info/
+
+# Development
+datasets/
 *_sync.sh
 *.csv
-
-__pycache__
-
 config.yaml
+
+# Dependencies
+src/mtxman/deps/*
+!src/mtxman/deps/custom
