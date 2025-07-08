@@ -28,7 +28,8 @@ def generate(
     if generate:
       try:
         console.print(f"==> ⚙️ Generating PaRMAT matrix \"{mtx_path.stem}\"")
-        cli_args = [str(v) for v in ([f'./{dependencies.PARMAT_GENERATOR.stem}'] + cli_args + ['-output', mtx_path.resolve().absolute()])]
+        output_path = os.path.relpath(mtx_path.resolve(), dependencies.PARMAT_GENERATOR.parent)
+        cli_args = [str(v) for v in ([f'./{dependencies.PARMAT_GENERATOR.stem}'] + cli_args + ['-output', output_path])]
         print(' '.join(cli_args))
         subprocess.run(cli_args, cwd=dependencies.PARMAT_GENERATOR.parent, check=True)
         with open(mtx_path.resolve().absolute(), 'r+') as f:

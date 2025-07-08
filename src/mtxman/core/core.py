@@ -1,9 +1,13 @@
+import csv
 import os
+import re
 import subprocess
 import yaml
 from typing import List, Tuple, Union
 from pathlib import Path
+from bs4 import BeautifulSoup
 from rich.console import Console
+import requests
 from dataclasses import dataclass
 
 from mtxman.core.dependencies import MTX_TO_BMTX_CONVERTER
@@ -158,6 +162,129 @@ class Config:
   path: Path
   categories: Dict[str, ConfigCategory]
 
+  def export_matrices_metadata_csv(self, output_csv: Union[Path, str]):
+    """
+    Generate a CSV file with metadata for all matrices listed in the config.
+
+    Args:
+        output_csv (Path | str): Name of the output CSV file.
+    """
+    self.path = self.path.resolve()
+    output_csv = self.path / output_csv
+    console.print(f"\n[green]Gathering matrices metadata[/green]")
+
+    matrix_files = DatasetManager.all_matrices
+    if len(matrix_files) <= 0:
+      dataset_base_path = Path(self.path).resolve()
+      matrix_list_txt = dataset_base_path / "matrices_list.txt"
+      if not matrix_list_txt.exists():
+        console.print(f"[red]Matrix list file not found at {matrix_list_txt}[/red]")
+        return
+      with matrix_list_txt.open("r") as f:
+        matrix_files = [line.strip() for line in f.readlines() if line.strip()]
+
+    fields = [
+      "Name", "Category", "Group", "MatrixID", "NumRows", "NumCols",
+      "Nonzeros", "Symmetric", "SparsityRatio", "Link", "ImageLink",
+      "Source", "Params"
+    ]
+    output_csv.parent.mkdir(parents=True, exist_ok=True)
+
+    with output_csv.open("w", newline="") as f:
+      writer = csv.writer(f)
+      writer.writerow(fields)
+
+      for file in matrix_files:
+        file_path = Path(file)
+        if len(file_path.parts) < 2:
+          continue
+
+        category = file_path.resolve().relative_to(self.path).parts[0]  # user-defined category path
+        source = file_path.parts[-2]  # Matrix type: SuiteSparse, Graph500, PaRMAT
+        name = file_path.stem
+
+        if source == "Graph500":
+          matches = re.match(r'graph500_(\d+)_(\d+)', str(name))
+          if not matches or len(matches.groups()) < 2:
+            console.print(f'[red]Could not parse Graph500 matrix name "{name}"[/red]')
+            continue
+          scale = int(matches.group(1))
+          edgefactor = int(matches.group(2))
+          param_str = f"{scale=},{edgefactor=}"
+          N = 2 ** scale
+          M = N * edgefactor
+          spr = float(M) / float(N * N)
+          writer.writerow([name, category, "", "", N, N, M, "No", f"{spr:.10f}", "", "", "Graph500", param_str])
+          console.print(f"[dim blue]Logged synthetic matrix (Graph500): {name}[/dim blue]")
+          continue
+
+        if source == "PaRMAT":
+          matches = re.match(r'parmat_N(\d+)_M(\d+)_a(\d+)_b(\d+)_c(\d+)\w*', str(name))
+          if not matches or len(matches.groups()) < 5:
+            console.print(f'[red]Could not parse PaRMAT matrix name "{name}"[/red]')
+            continue
+          N = int(matches.group(1))
+          M = int(matches.group(2))
+          spr = float(M) / float(N * N)
+          param_str = (
+              f"{N=},{M=},a={matches.group(3)},b={matches.group(4)},c={matches.group(5)},"
+              f"noDuplicateEdges={'noDup' in name},undirected={'undir' in name},"
+              f"noEdgeToSelf={'noSelf' in name},sorted={'sorted' in name}"
+          )
+          spr = float(M) / float(N * N)
+          writer.writerow([name, category, "", "", N, N, M, "No", f"{spr:.10f}", "", "", "PaRMAT", param_str])
+          console.print(f"[dim blue]Logged synthetic matrix (PaRMAT): {name}[/dim blue]")
+          continue
+
+        # SuiteSparse
+        group = file_path.parts[-3]
+        full_name = f"{group}/{name}"
+        url = f"https://sparse.tamu.edu/{full_name}"
+        console.print(f"[dim blue]Fetching metadata for[/dim blue] {full_name}")
+
+        try:
+          response = requests.get(url)
+          response.raise_for_status()
+        except Exception as e:
+          console.print(f"[red]Failed to fetch {url}: {e}[/red]")
+          continue
+
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        def extract_text_between(th_text):
+          for th in soup.find_all("th"):
+            if th_text.strip().lower() == th.get_text(strip=True).split("\n")[0].strip().lower():
+              td = th.find_next("td")
+              if td:
+                return td.get_text(strip=True)
+          return ""
+
+        def extract_image_link():
+          div = soup.find("div", class_="carousel-item active")
+          if div and (a_tag := div.find("a", href=True)):
+            return a_tag["href"]
+          return ""
+
+        name_field = extract_text_between("Name")
+        group_field = extract_text_between("Group")
+        matrix_id = extract_text_between("Matrix ID")
+        num_rows = int(re.sub(",", "", extract_text_between("Num Rows")) or 0)
+        num_cols = int(re.sub(",", "", extract_text_between("Num Cols")) or 0)
+        nonzeros = int(re.sub(",", "", extract_text_between("Nonzeros")) or 0)
+        spr = nonzeros / (num_rows * num_cols) if num_rows and num_cols else 0
+        symmetric = extract_text_between("Symmetric")
+        image_link = extract_image_link()
+
+        writer.writerow([
+          name_field, category, group_field, matrix_id,
+          num_rows, num_cols, nonzeros, symmetric,
+          f"{spr:.10f}", url, image_link,
+          "SuiteSparse", ""
+        ])
+        console.print(f"[dim blue]Logged SuiteSparse matrix: {full_name}[/dim blue]")
+
+    console.print(f"[green]CSV written to[/green] {output_csv}")
+
 
 @dataclass
 class Flags:
@@ -236,7 +363,7 @@ class DatasetManager:
 
     subfolder = 'PaRMAT'
     path = self.get_category_path() / subfolder / matrix_full_name
-    path.mkdir(parents=True, exist_ok=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
     return path, cli_args
 
   def register_matrix_path(self, path: Path, is_bmtx: bool):

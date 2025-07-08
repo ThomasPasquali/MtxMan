@@ -40,7 +40,7 @@ def generate(
       # set_env(file_name)  # This is probably not needed anymore
       try:
         console.print(f"==> ⚙️ Generating Graph500 graph with (scale, edge factor) = ({matrix.scale}, {matrix.edge_factor})")
-        subprocess.run([f'./{dependencies.GRAPH500_GENERATOR.stem}', str(matrix.scale), str(matrix.edge_factor), str(mtx_path)], cwd=dependencies.GRAPH500_GENERATOR.parent, check=True)
+        subprocess.run([f'./{dependencies.GRAPH500_GENERATOR.stem}', str(matrix.scale), str(matrix.edge_factor), str(mtx_path.resolve().absolute())], cwd=dependencies.GRAPH500_GENERATOR.parent, check=True)
       except subprocess.CalledProcessError as e:
         console.print(f"[red]Graph generation failed:[/red] {e}")
         # unset_env()

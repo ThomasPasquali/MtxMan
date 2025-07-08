@@ -49,7 +49,8 @@ def sync(
   keep_all_files: bool = typer.Option(False, "--keep_all_files", "-ka", help="Keep all files in SuiteSparse archives."),
   binary_mtx: bool = typer.Option(False, "--binary-mtx", "-bmtx", help="Generate binary '.bmtx' files."),
   keep_mtx: bool = typer.Option(False, "--keep-mtx", "-kmtx", help="(Used with --binary-mtx) Keep original '.mtx' files."),
-  binary_mtx_double_vals: bool = typer.Option(False, "--binary-mtx-double-vals", "-bmtxd", help="(Used with --binary-mtx) Store values using 8 bytes instead of 4.")
+  binary_mtx_double_vals: bool = typer.Option(False, "--binary-mtx-double-vals", "-bmtxd", help="(Used with --binary-mtx) Store values using 8 bytes instead of 4."),
+  skip_metadata: bool = typer.Option(False, "--skip-metadata", "-nometa", help="If set, the 'matrices_metadata.csv' file will not be generated.")
 ):
   """
   Synchronizes the matrices configured via '[FILE]'
@@ -74,7 +75,11 @@ def sync(
 
     category_datasets_manager = core.DatasetManager(config.path, category_name)
 
-    # parmat_generator.generate(typer.Option(None), config, category),
+    parmat_generator.generate(
+      config=category_config,
+      flags=flags,
+      dataset_manager=category_datasets_manager,
+    )
     graph500_generator.generate(
       config=category_config,
       flags=flags,
@@ -96,6 +101,9 @@ def sync(
     console.print(f'[bold green]>> Category "{category_name}", up to date![/bold green]\n')
 
   core.DatasetManager.write_global_summary(config.path)
+
+  if not skip_metadata:
+    config.export_matrices_metadata_csv('matrices_metadata.csv')
 
 pipe_sep = '|'
 @app.command('update-deps')
