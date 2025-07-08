@@ -2,12 +2,12 @@ import importlib
 from pathlib import Path
 import typer
 from typing_extensions import Annotated
-from typing import Optional
+from typing import List, Optional
 from rich.console import Console
 
 from mtxman.exceptions import MtxManError
 import mtxman.core.core as core
-import mtxman.core.dependencies as deps
+import mtxman.core.dependencies as dependencies
 import mtxman.generators.graph500 as graph500_generator
 import mtxman.generators.parmat as parmat_generator
 import mtxman.downloaders.suite_sparse as suite_sparse_downloader
@@ -63,7 +63,7 @@ def sync(
   )
   
   if binary_mtx:
-    deps.download_and_build_mtx_to_bmtx_converter()
+    dependencies.download_and_build_mtx_to_bmtx_converter()
     
   for category_name, category_config in config.categories.items():
     if category_name in skip:
@@ -75,7 +75,11 @@ def sync(
     category_datasets_manager = core.DatasetManager(config.path, category_name)
 
     # parmat_generator.generate(typer.Option(None), config, category),
-    # graph500_generator.generate(typer.Option(None), config, category),
+    graph500_generator.generate(
+      config=category_config,
+      flags=flags,
+      dataset_manager=category_datasets_manager
+    )
     suite_sparse_downloader.download_list(
       config=category_config,
       flags=flags,
@@ -92,6 +96,25 @@ def sync(
     console.print(f'[bold green]>> Category "{category_name}", up to date![/bold green]\n')
 
   core.DatasetManager.write_global_summary(config.path)
+
+pipe_sep = '|'
+@app.command('update-deps')
+def update_deps(
+  deps: List[str] = typer.Option(None, help=f'Available options "{pipe_sep.join([d.value for d in dependencies.DEPS])}". Default: all. Example: "--deps {dependencies.DEPS.DISTRIBUTED_MMIO.value} --deps {dependencies.DEPS.GRAPH500.value}"')
+):
+  """
+  Explicitly Build or Rebuild dependencies.
+  """
+  if not deps:
+    deps = [d.value for d in dependencies.DEPS]
+  for d in deps:
+    match dependencies.DEPS(d):
+      case dependencies.DEPS.DISTRIBUTED_MMIO:
+        dependencies.download_and_build_mtx_to_bmtx_converter(force=True)
+      case dependencies.DEPS.GRAPH500:
+        dependencies.download_and_build_graph500_generator(force=True)
+      case dependencies.DEPS.PARMAT:
+        dependencies.download_and_build_parmat_generator(force=True)
 
 
 if __name__ == "__main__":

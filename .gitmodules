@@ -1,7 +1,0 @@
-[submodule "generators/graph500"]
-	path = generators/graph500
-	url = https://github.com/graph500/graph500
-
-[submodule "generators/PaRMAT"]
-	path = generators/PaRMAT
-	url = https://github.com/farkhor/PaRMAT.git

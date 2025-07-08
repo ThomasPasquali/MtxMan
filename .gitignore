@@ -22,6 +22,5 @@ datasets/
 config.yaml
 
 # Dependencies
-generators/
-!generators/custom
 src/mtxman/deps/*
+!src/mtxman/deps/custom

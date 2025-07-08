@@ -29,7 +29,7 @@ class SuiteSparseMatrixHandler:
     self.dm = dataset_manager
     self.base_path = base_path
 
-  def _get_matrix_paths(self, matrix) -> tuple[str, Path, Path, Path, Path]:
+  def _get_matrix_paths(self, matrix) -> tuple[str, Path, Path, Path]:
       full_name = f"{matrix.group}/{matrix.name}"
       group_dir = self.base_path / matrix.group
       matrix_dir = group_dir / matrix.name
@@ -38,9 +38,9 @@ class SuiteSparseMatrixHandler:
       mtx_path = matrix_dir / f"{matrix.name}.mtx"
       bmtx_path = matrix_dir / f"{matrix.name}.bmtx"
 
-      return full_name, group_dir, matrix_dir, mtx_path, bmtx_path
+      return full_name, group_dir, matrix_dir, mtx_path
 
-  def sync_matrix(self, matrix) -> bool:
+  def sync_matrix(self, matrix):
     """
     Download and convert a SuiteSparse matrix if necessary.
 
@@ -50,49 +50,22 @@ class SuiteSparseMatrixHandler:
     Returns:
       bool: True if the matrix was downloaded or converted, False otherwise.
     """
-    full_name, group_dir, matrix_dir, mtx_path, bmtx_path = self._get_matrix_paths(matrix)
+    full_name, group_dir, matrix_dir, mtx_path = self._get_matrix_paths(matrix)
 
-    mtx_exists = mtx_path.is_file()
-    bmtx_exists = bmtx_path.is_file()
-
-    if self.flags.binary_mtx and bmtx_exists:
-      console.print(f"[yellow]{full_name} already downloaded and converted, skipped[/yellow]")
-      return False
-    elif not self.flags.binary_mtx and mtx_exists:
-      console.print(f"[yellow]{full_name} already downloaded, skipped[/yellow]")
-      return False
-
-    info = ''
-    download = False
-    convert = False
-
-    if self.flags.binary_mtx and mtx_exists and not bmtx_exists:
-        info = 'Converting to BMTX'
-        convert = True
-    elif not self.flags.binary_mtx and not mtx_exists:
-        info = 'Downloading'
-        download = True
-    elif self.flags.binary_mtx and not mtx_exists:
-        info = 'Downloading and Converting to BMTX'
-        download = True
-        convert = True
-    else:
-        raise RuntimeError('Invalid state encountered in sync_matrix')
-
-    console.print(f"[bold cyan]{info} {full_name}[/bold cyan]")
+    download, convert = self.dm.check_matrix_status(mtx_path, self.flags, True, full_name)
 
     if download:
-        matrix_url = matrix.url('MM')
-        tar_file_path = group_dir / f"{matrix.name}.tar.gz"
+      matrix_url = matrix.url('MM')
+      tar_file_path = group_dir / f"{matrix.name}.tar.gz"
 
-        os.system(f"wget -O {tar_file_path} {matrix_url}")
-        os.system(f"tar -xzf {tar_file_path} -C {group_dir}")
+      os.system(f"wget -O {tar_file_path} {matrix_url}")
+      os.system(f"tar -xzf {tar_file_path} -C {group_dir}")
 
-        extracted_mtx = group_dir / f"{matrix.name}.mtx"
-        if extracted_mtx.exists():
-            extracted_mtx.rename(mtx_path)
+      extracted_mtx = group_dir / f"{matrix.name}.mtx"
+      if extracted_mtx.exists():
+        extracted_mtx.rename(mtx_path)
 
-        tar_file_path.unlink()
+      tar_file_path.unlink()
 
     if not self.flags.keep_all_files:
       for file in matrix_dir.glob("*.mtx"):
@@ -100,16 +73,9 @@ class SuiteSparseMatrixHandler:
           file.unlink()
 
     if convert and self.flags.binary_mtx:
-        cmd = [str(MTX_TO_BMTX_CONVERTER), str(mtx_path)]
-        if self.flags.binary_mtx_double_vals:
-          cmd.append("-d")
-
-        subprocess.run(cmd, check=True)
-        if not self.flags.keep_mtx:
-          mtx_path.unlink()
-
-    self.dm.register_matrix_path(bmtx_path if self.flags.binary_mtx else mtx_path)
-    return True
+      self.dm.convert_to_bmtx(mtx_path, self.flags, full_name)
+      
+    self.dm.register_matrix_path(mtx_path, self.flags.binary_mtx)
 
 def download_list(
   config: ConfigCategory,
@@ -132,7 +98,7 @@ def download_list(
 
   for group, name in matrix_list:
     full_name = f'{group}/{name}'
-    console.print(f"[cyan]Checking matrix: {full_name}[/cyan]")
+    console.print(f"[cyan]🔎 Checking matrix: \"{full_name}\"[/cyan]")
     matrices = ssgetpy.search(name=name, limit=1)
 
     if not matrices:

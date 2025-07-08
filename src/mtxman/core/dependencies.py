@@ -1,19 +1,27 @@
 from dataclasses import dataclass
+from enum import Enum
 import shutil
 import subprocess
 import zipfile
 import requests
 from pathlib import Path
 from rich.console import Console
-from typing import Optional, List, Tuple, Union
+from typing import Callable, Optional, List, Tuple, Union
 
 from mtxman.exceptions import DependencyError
 
 console = Console()
 
+class DEPS(Enum):
+  DISTRIBUTED_MMIO = 'distributed_mmio'
+  GRAPH500 = 'graph500'
+  PARMAT = 'parmat'
+
 DEPS_DIR = Path(__file__).resolve().parent.parent / 'deps'
 
 MTX_TO_BMTX_CONVERTER = DEPS_DIR / 'distributed_mmio/build/mtx_to_bmtx'
+GRAPH500_GENERATOR = DEPS_DIR / 'graph500/generator/graph500_gen'
+PARMAT_GENERATOR = DEPS_DIR / 'PaRMAT/Release/PaRMAT'
 
 @dataclass
 class DependencyManager:
@@ -23,7 +31,7 @@ class DependencyManager:
     url: str,
     subdir: Optional[str] = None,
     branch: str = "main",
-    build_commands: Optional[List[Union[Tuple[Path, List[str]], List[str]]]] = None,
+    build_commands: Optional[List[Union[Tuple[Path, List[str]], List[str], Callable]]] = None,
     force: bool = False,
   ) -> Path:
     """
@@ -45,7 +53,7 @@ class DependencyManager:
       shutil.rmtree(target_dir)
 
     if target_dir.exists():
-      # console.print(f"[green]✓ Dependency '{name}' already exists.[/green]")
+      # console.print(f"[green]✅ Dependency '{name}' already exists.[/green]")
       return target_dir
 
     zip_url = f"{url}/archive/refs/heads/{branch}.zip"
@@ -82,18 +90,22 @@ class DependencyManager:
       console.print(f"🔧 [yellow]Building '{name}'...[/yellow]")
       for command in build_commands:
         try:
-          if isinstance(command, tuple):
+          if isinstance(command, Callable):
+            command()
+          elif isinstance(command, tuple):
             subprocess.run(command[1], cwd=target_dir / command[0], check=True, stdout=subprocess.DEVNULL)
-          else:
+          elif isinstance(command, list):
             subprocess.run(command, cwd=target_dir, check=True, stdout=subprocess.DEVNULL)
+          else:
+            raise RuntimeError(f'Invalid build command type "{type(command)}": {command}')
         except subprocess.CalledProcessError as e:
             raise DependencyError(f"Build failed for {name}: {e}")
 
-      console.print(f"[green]✓ Build complete for '{name}'.[/green]")
+      console.print(f"[green]✅ Build complete for '{name}'.[/green]")
 
     return target_dir
 
-def download_and_build_mtx_to_bmtx_converter():
+def download_and_build_mtx_to_bmtx_converter(force=False):
   DependencyManager.install(
     name="distributed_mmio",
     url="https://github.com/HicrestLaboratory/distributed_mmio",
@@ -101,4 +113,34 @@ def download_and_build_mtx_to_bmtx_converter():
       ["cmake", "-B", "build"],
       (Path('build'), ["make", "mtx_to_bmtx"]),
     ],
+    force=force,
+  )
+
+def download_and_build_graph500_generator(force=False):
+  G500_GEN_MAIN_C = 'graph500_generator_main.c'
+  DependencyManager.install(
+    name="graph500",
+    url="https://github.com/graph500/graph500",
+    branch='newreference',
+    build_commands=[
+      lambda: shutil.copy2(DEPS_DIR / 'custom' / G500_GEN_MAIN_C, DEPS_DIR / 'graph500/generator' / G500_GEN_MAIN_C),
+      (Path('generator'), [
+        'gcc', '-O3', '-I', './',
+        '-o', 'graph500_gen',
+        G500_GEN_MAIN_C, 'make_graph.c', 'splittable_mrg.c', 'graph_generator.c', 'utils.c',
+        '-lm', '-w'
+      ]),
+    ],
+    force=force,
+  )
+
+def download_and_build_parmat_generator(force=False):
+  DependencyManager.install(
+    name="PaRMAT",
+    url="https://github.com/farkhor/PaRMAT",
+    build_commands=[
+      (Path('Release'), ['make']),
+    ],
+    branch='master',
+    force=force,
   )
