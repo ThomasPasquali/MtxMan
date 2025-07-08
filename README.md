@@ -155,7 +155,7 @@ matrices_category_3:
 
 The downloaded/generated files are structured as follows:
 
-```bash
+```
 <config.path>
 ├── <category_0>
 │   ├── <SuiteSparse_group_0> # Matrices from SuiteSparse "list"
