@@ -19,7 +19,7 @@ def version_callback(value: bool):
   if not value:
     return
   try:
-    console.print(f"MtxMan version: [bold cyan]{importlib.metadata.version("mtxman")}[/bold cyan]")
+    console.print(f"MtxMan version: [bold cyan]{importlib.metadata.version('mtxman')}[/bold cyan]")
   except importlib.metadata.PackageNotFoundError:
     console.print("[bold red]Error:[/bold red] Could not determine the version. Is MtxMan installed correctly?")
     raise typer.Exit(1)
