@@ -116,13 +116,12 @@ def update_deps(
   if not deps:
     deps = [d.value for d in dependencies.DEPS]
   for d in deps:
-    match d:
-      case dependencies.DEPS.DISTRIBUTED_MMIO.value:
-        dependencies.download_and_build_mtx_to_bmtx_converter(force=True)
-      case dependencies.DEPS.GRAPH500.value:
-        dependencies.download_and_build_graph500_generator(force=True)
-      case dependencies.DEPS.PARMAT.value:
-        dependencies.download_and_build_parmat_generator(force=True)
+    if d == dependencies.DEPS.DISTRIBUTED_MMIO.value:
+      dependencies.download_and_build_mtx_to_bmtx_converter(force=True)
+    elif d == dependencies.DEPS.GRAPH500.value:
+      dependencies.download_and_build_graph500_generator(force=True)
+    elif d == dependencies.DEPS.PARMAT.value:
+      dependencies.download_and_build_parmat_generator(force=True)
 
 
 if __name__ == "__main__":
