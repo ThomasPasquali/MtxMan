@@ -338,13 +338,11 @@ class DatasetManager:
   
   def get_parmat_path_and_cli_args(self, matrix: PaRMATMatrix) -> Tuple[Path, List[str]]:
     """Returns the path for a PaRMAT matrix."""
-    cli_args = ['-nVertices', matrix.N, '-nEdges', matrix.M]
+    cli_args = [
+      '-nVertices', matrix.N, '-nEdges', matrix.M,
+      '-a', matrix.a, '-b', matrix.b, '-c', matrix.c
+    ]
     params = []
-    # if 'a' not in mtx_config:
-    #     mtx_config['a'] = mtx_config['b'] = mtx_config['c'] = 0.25
-    # if 'a' in mtx_config and 'b' in mtx_config and 'c' in mtx_config:
-    #     params.append(f"a{int(1000*mtx_config['a'])}_b{int(1000*mtx_config['b'])}_c{int(1000*mtx_config['c'])}")
-    #     cli_args += ['-a', mtx_config['a'], '-b', mtx_config['b'], '-c', mtx_config['c']]
     params.append(f"a{int(1000*matrix.a)}_b{int(1000*matrix.b)}_c{int(1000*matrix.c)}")
     if matrix.noDuplicateEdges:
       params.append("noDup")
