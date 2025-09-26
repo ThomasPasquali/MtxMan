@@ -302,14 +302,16 @@ class Flags:
 
 class DatasetManager:
   MATRICES_SUMMARY_FILENAME = "matrices_list.txt"
+  MATRICES_SUMMARY_FILENAME_MTX = "matrices_list_mtx.txt"
   # Static attribute to store all matrices generated or downloaded
   all_matrices: List[Path] = []
 
-  def __init__(self, base_path: Path, category: str):
+  def __init__(self, base_path: Path, category: str, keep_mtx=False):
     self.base_path = base_path.resolve()
     self.base_path.mkdir(parents=True, exist_ok=True)
     self.category = category
     self.category_matrices = []
+    self.keep_mtx = keep_mtx
 
   def get_category_path(self) -> Path:
     """Returns the path for a dataset category folder."""
@@ -384,12 +386,19 @@ class DatasetManager:
     summary_file = self.base_path / self.category / DatasetManager.MATRICES_SUMMARY_FILENAME
     with open(summary_file, "w") as f:
       for matrix_path in self.category_matrices:
-        # rel_path = matrix_path.relative_to(self.base_path.parent)
         f.write(str(Path(matrix_path).resolve().absolute()) + "\n")
     console.print(f"[green]✅ Summary written to:[/green] [purple]'{summary_file}'[/purple]")
+    
+    if self.keep_mtx:
+      summary_file = self.base_path / self.category / DatasetManager.MATRICES_SUMMARY_FILENAME_MTX
+      with open(summary_file, "w") as f:
+        for matrix_path in self.category_matrices:
+          f.write(str(Path(matrix_path).with_suffix('.mtx').resolve().absolute()) + "\n")
+      console.print(f"[green]✅ Alternative summary (MTX matrices paths) written to:[/green] [purple]'{summary_file}'[/purple]")
+    
 
   @staticmethod
-  def write_global_summary(base_path: Path):
+  def write_global_summary(base_path: Path, keep_mtx=False):
     """
     Write global summary at <base_path>/matrices_list.txt.
     """
@@ -397,10 +406,16 @@ class DatasetManager:
     summary_file = base_path / DatasetManager.MATRICES_SUMMARY_FILENAME
     with summary_file.open("w") as f:
       for matrix_path in DatasetManager.all_matrices:
-        # rel_path = matrix_path.relative_to(base_path.parent)
         f.write(str(Path(matrix_path).resolve().absolute()) + "\n")
-
     console.print(f"[bold cyan]Global summary written to:[/bold cyan] [purple]'{summary_file.absolute()}'[/purple]")
+    
+    if keep_mtx:
+      summary_file = base_path / DatasetManager.MATRICES_SUMMARY_FILENAME_MTX
+      with open(summary_file, "w") as f:
+        for matrix_path in DatasetManager.all_matrices:
+          f.write(str(Path(matrix_path).with_suffix('.mtx').resolve().absolute()) + "\n")
+      console.print(f"[green]✅ Alternative global summary (MTX matrices paths) written to:[/green] [purple]'{summary_file}'[/purple]")
+    
 
   def check_matrix_status(self, matrix_path: Path, flags: Flags, downloading: bool, matrix_full_name: str) -> Tuple[bool, bool]:
     """

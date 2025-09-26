@@ -110,7 +110,7 @@ def download_and_build_mtx_to_bmtx_converter(force=False):
     name="distributed_mmio",
     url="https://github.com/HicrestLaboratory/distributed_mmio",
     build_commands=[
-      ["cmake", "-B", "build"],
+      ["cmake", "-DCMAKE_CXX_COMPILER=CC", "-DMMIO_ENABLE_MPI=OFF", "-DCCUTILS_ENABLE_MPI=OFF", "-B", "build"],
       (Path('build'), ["make", "mtx_to_bmtx"]),
     ],
     force=force,

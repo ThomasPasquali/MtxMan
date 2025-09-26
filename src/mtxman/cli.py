@@ -73,7 +73,7 @@ def sync(
 
     console.print(f'[bold green]>> Syncing category "{category_name}"...[/bold green]')
 
-    category_datasets_manager = core.DatasetManager(config.path, category_name)
+    category_datasets_manager = core.DatasetManager(config.path, category_name, keep_mtx)
 
     parmat_generator.generate(
       config=category_config,
@@ -100,7 +100,7 @@ def sync(
 
     console.print(f'[bold green]>> Category "{category_name}", up to date![/bold green]\n')
 
-  core.DatasetManager.write_global_summary(config.path)
+  core.DatasetManager.write_global_summary(config.path, keep_mtx)
 
   if not skip_metadata:
     config.export_matrices_metadata_csv('matrices_metadata.csv')
