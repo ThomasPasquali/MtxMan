@@ -384,8 +384,8 @@ class DatasetManager:
     summary_file = self.base_path / self.category / DatasetManager.MATRICES_SUMMARY_FILENAME
     with open(summary_file, "w") as f:
       for matrix_path in self.category_matrices:
-        rel_path = matrix_path.relative_to(self.base_path.parent)
-        f.write(str(rel_path) + "\n")
+        # rel_path = matrix_path.relative_to(self.base_path.parent)
+        f.write(str(Path(matrix_path).resolve().absolute()) + "\n")
     console.print(f"[green]✅ Summary written to:[/green] [purple]'{summary_file}'[/purple]")
 
   @staticmethod
@@ -397,8 +397,8 @@ class DatasetManager:
     summary_file = base_path / DatasetManager.MATRICES_SUMMARY_FILENAME
     with summary_file.open("w") as f:
       for matrix_path in DatasetManager.all_matrices:
-        rel_path = matrix_path.relative_to(base_path.parent)
-        f.write(str(rel_path) + "\n")
+        # rel_path = matrix_path.relative_to(base_path.parent)
+        f.write(str(Path(matrix_path).resolve().absolute()) + "\n")
 
     console.print(f"[bold cyan]Global summary written to:[/bold cyan] [purple]'{summary_file.absolute()}'[/purple]")
 
