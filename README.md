@@ -130,6 +130,18 @@ matrices_category_1:
     max_nnzs: 1000
     limit: 4
 
+  # Configuration for downloading files directly from publicly available URLs
+  # Supported archive types: `zip`, `tar`, `tar.gz` (`tgz`)
+  # `filename` is REQUIRED. Ensure to include file extension (.mtx or .bmtx)
+  # `rename` is optional. If set, the matrix and containing folder will be renamed
+  direct_urls:
+    - url: https://suitesparse-collection-website.herokuapp.com/MM/HB/1138_bus.tar.gz
+      filename: 1138_bus.mtx
+      rename: renamed_1138_bus.mtx
+
+    - url: https://suitesparse-collection-website.herokuapp.com/MM/HB/1138_bus.tar.gz
+      filename: 1138_bus.mtx
+
 # This is ANOTHER example subfolder/category of matrices
 # The configuration structure is as above
 # Keys 'generators', 'suite_sparse_matrix_list' and 'suite_sparse_matrix_range' are OPTIONAL
@@ -183,12 +195,16 @@ The downloaded/generated files are structured as follows:
 |   │   │   └── <matrix_0>
 |   │   │       └── <matrix_0>.mtx
 |   |   ...
-|   └── matrices_list.txt # Summary file, contains all matrices paths for <category_0>
+|   └── matrices_list.txt     # Summary file, contains <category_0> matrices paths
+|   └── matrices_list_mtx.txt # This file will be generated only if running the sync command with `-bmtx -kmtx`.
+|   |                         # It will contain paths to .mtx files
+|   └── matrices_metadata.csv # Summary file, contains <category_0> matrices metadata (if available)
 ├── <category_1>
 │   |
 |   ... # Same structure
 ...
-└── matrices_list.txt # Summary file, contains all matrices paths
+└── matrices_list.txt     # Summary file, contains all matrices paths
+└── matrices_list_mtx.txt # Same as the category-specific file
 └── matrices_metadata.csv # Summary file, contains all matrices metadata (number of rows, columns, non-zeros etc.)
 ```
 

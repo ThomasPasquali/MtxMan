@@ -51,6 +51,18 @@ matrices_category_1:
     max_nnzs: 1000
     limit: 4
 
+  # Configuration for downloading files directly from publicly available URLs
+  # Supported archive types: `zip`, `tar`, `tar.gz` (`tgz`)
+  # `filename` is REQUIRED. Ensure to include file extension (.mtx or .bmtx)
+  # `rename` is optional. If set, the matrix and containing folder will be renamed
+  direct_urls:
+    - url: https://suitesparse-collection-website.herokuapp.com/MM/HB/1138_bus.tar.gz
+      filename: 1138_bus.mtx
+      rename: renamed_1138_bus.mtx
+
+    - url: https://suitesparse-collection-website.herokuapp.com/MM/HB/1138_bus.tar.gz
+      filename: 1138_bus.mtx
+
 # This is ANOTHER example subfolder/category of matrices
 # The configuration structure is as above
 # Keys 'generators', 'suite_sparse_matrix_list' and 'suite_sparse_matrix_range' are OPTIONAL

@@ -11,6 +11,7 @@ import mtxman.core.dependencies as dependencies
 import mtxman.generators.graph500 as graph500_generator
 import mtxman.generators.parmat as parmat_generator
 import mtxman.downloaders.suite_sparse as suite_sparse_downloader
+import mtxman.downloaders.direct_url as direct_url_downloader
 
 app = typer.Typer(help="A utility that simplifies the download and generation of Matrix Market (`.mtx`) files.", add_completion=True)
 console = Console()
@@ -91,6 +92,11 @@ def sync(
       dataset_manager=category_datasets_manager
     )
     suite_sparse_downloader.download_range(
+      config=category_config,
+      flags=flags,
+      dataset_manager=category_datasets_manager
+    )
+    direct_url_downloader.download_url_list(
       config=category_config,
       flags=flags,
       dataset_manager=category_datasets_manager

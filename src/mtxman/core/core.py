@@ -149,12 +149,13 @@ class ConfigSuiteSparseRange:
   max_nnzs: int
   limit: int
 
-
 @dataclass
 class ConfigCategory:
+  scratch_path: Path
   generators: Optional[ConfigGenerators] = None
-  suite_sparse_matrix_list: List[Tuple[str, str]] = field(default_factory=list)
+  suite_sparse_matrix_list: Optional[List[Tuple[str, str]]] = field(default_factory=list)
   suite_sparse_matrix_range: Optional[ConfigSuiteSparseRange] = None
+  direct_urls: Optional[List[Dict]] = None
 
 
 @dataclass
@@ -202,6 +203,7 @@ class Config:
         category = file_path.resolve().relative_to(self.path).parts[0]  # user-defined category path
         source = file_path.parts[-2]  # Matrix type: SuiteSparse, Graph500, PaRMAT
         name = file_path.stem
+        url = None
 
         if source == "Graph500":
           matches = re.match(r'graph500_(\d+)_(\d+)', str(name))
@@ -218,7 +220,7 @@ class Config:
           console.print(f"[dim blue]Logged synthetic matrix (Graph500): {name}[/dim blue]")
           continue
 
-        if source == "PaRMAT":
+        elif source == "PaRMAT":
           matches = re.match(r'parmat_N(\d+)_M(\d+)_a(\d+)_b(\d+)_c(\d+)\w*', str(name))
           if not matches or len(matches.groups()) < 5:
             console.print(f'[red]Could not parse PaRMAT matrix name "{name}"[/red]')
@@ -237,11 +239,18 @@ class Config:
           continue
 
         # SuiteSparse
-        group = file_path.parts[-3]
-        full_name = f"{group}/{name}"
-        url = f"https://sparse.tamu.edu/{full_name}"
-        console.print(f"[dim blue]Fetching metadata for[/dim blue] {full_name}")
-
+        elif source == "SuiteSparse":
+          group = file_path.parts[-3]
+          full_name = f"{group}/{name}"
+          url = f"https://sparse.tamu.edu/{full_name}"
+          console.print(f"[dim blue]Fetching metadata for[/dim blue] {full_name}")
+          
+        else:
+          writer.writerow([name, category, "", "", "", "", "", "", "", "", "", "DirectURL", ""])
+          console.print(f"[dim blue]Logged synthetic matrix (DirectURL): {name}[/dim blue]")
+          continue
+          
+        
         try:
           response = requests.get(url)
           response.raise_for_status()
@@ -284,6 +293,12 @@ class Config:
         console.print(f"[dim blue]Logged SuiteSparse matrix: {full_name}[/dim blue]")
 
     console.print(f"[green]CSV written to[/green] {output_csv}")
+  
+  @staticmethod
+  def get_scratch_path(base_path: Path) -> Path:
+    path = base_path / 'scratch'
+    path.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 @dataclass
@@ -335,6 +350,14 @@ class DatasetManager:
     subfolder = 'Graph500'
     mtx_file = f'graph500_{matrix.scale}_{matrix.edge_factor}.mtx'
     path = self.get_category_path() / subfolder / mtx_file
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+  
+  def get_direct_url_matrix_path(self, filename: str, rename: Optional[str]) -> Path:
+    """Returns the path for a direct URL matrix."""
+    subfolder = 'DirectURL'
+    mtx_file = rename if rename else filename
+    path = self.get_category_path() / subfolder / mtx_file.split('.')[0] / mtx_file
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
   
@@ -531,11 +554,18 @@ def load_config_file(path: Path) -> Config:
         if len(ms) != 2:
           raise ConfigurationFormatError(f"[{cat_name}] Invalid 'suite_sparse_matrix_list': this must be a list of string in the form 'mtx_group/mtx_name'.\nInvalid value '{m}'")
         parsed_suite_list.append((ms[0],ms[1]))
+        
+      if "direct_urls" in cat_data:
+        for matrix_direct_url in cat_data["direct_urls"]:
+          if not (matrix_direct_url.get('url') and matrix_direct_url.get('filename')):
+            raise ConfigurationFormatError(f"[{cat_name}] Invalid 'direct_urls'. `url` and `filename` fields are mandatory. Not found in: {matrix_direct_url}")
 
       category = ConfigCategory(
+        scratch_path=Config.get_scratch_path(base_path),
         generators=ConfigGenerators(graph500=graph500, parmat=parmat),
         suite_sparse_matrix_list=parsed_suite_list,
-        suite_sparse_matrix_range=suite_range
+        suite_sparse_matrix_range=suite_range,
+        direct_urls=cat_data["direct_urls"],
       )
 
       categories[cat_name] = category
