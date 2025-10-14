@@ -201,7 +201,7 @@ class Config:
           continue
 
         category = file_path.resolve().relative_to(self.path).parts[0]  # user-defined category path
-        source = file_path.parts[-2]  # Matrix type: SuiteSparse, Graph500, PaRMAT
+        source = file_path.resolve().relative_to(self.path).parts[1]  # Matrix type: DirectURL, Graph500, PaRMAT
         name = file_path.stem
         url = None
 
@@ -238,18 +238,16 @@ class Config:
           console.print(f"[dim blue]Logged synthetic matrix (PaRMAT): {name}[/dim blue]")
           continue
 
-        # SuiteSparse
-        elif source == "SuiteSparse":
-          group = file_path.parts[-3]
-          full_name = f"{group}/{name}"
-          url = f"https://sparse.tamu.edu/{full_name}"
-          console.print(f"[dim blue]Fetching metadata for[/dim blue] {full_name}")
-          
-        else:
+        # DirectURL
+        elif source == "DirectURL":
           writer.writerow([name, category, "", "", "", "", "", "", "", "", "", "DirectURL", ""])
           console.print(f"[dim blue]Logged synthetic matrix (DirectURL): {name}[/dim blue]")
           continue
           
+        group = file_path.parts[-3]
+        full_name = f"{group}/{name}"
+        url = f"https://sparse.tamu.edu/{full_name}"
+        console.print(f"[dim blue]Fetching metadata for[/dim blue] {full_name}")          
         
         try:
           response = requests.get(url)
@@ -565,7 +563,7 @@ def load_config_file(path: Path) -> Config:
         generators=ConfigGenerators(graph500=graph500, parmat=parmat),
         suite_sparse_matrix_list=parsed_suite_list,
         suite_sparse_matrix_range=suite_range,
-        direct_urls=cat_data["direct_urls"],
+        direct_urls=cat_data.get("direct_urls"),
       )
 
       categories[cat_name] = category
