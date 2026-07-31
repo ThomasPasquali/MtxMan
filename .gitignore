@@ -1,6 +1,7 @@
 # Environment
 .vscode
 .venv
+.venv*
 
 # CMake
 CMakeFiles/

@@ -108,32 +108,46 @@ def download_list(
     if matrix.name == name:
       handler.sync_matrix(matrix)
     else:
-      console.print(f"[red]{name} matched but was not an exact match, skipped[/red]")
+      console.print(f"[red]{name}  matched but was not an exact match, skipped[/red]")
 
 
-def download_range(
+def download_filters(
   config: ConfigCategory,
   flags: Flags,
   dataset_manager: DatasetManager,
 ):
   """
-  Download a range of SuiteSparse matrices based on NNZ constraints.
+  Download a range of SuiteSparse matrices based on NNZ constraints or group list filters.
 
   Returns:
       dict: Mapping of matrix full names to file paths.
   """
-  if not config.suite_sparse_matrix_range:
-    return
-  
-  range = config.suite_sparse_matrix_range
+  if config.suite_sparse_group_list and config.suite_sparse_group_list.groups:
+    yaml_groups_data = config.suite_sparse_group_list 
+    group_list = yaml_groups_data.groups
 
-  matrices = ssgetpy.fetch(nzbounds=(range.min_nnzs, range.max_nnzs), limit=range.limit, dry_run=True)
-  handler = SuiteSparseMatrixHandler(
-    base_path=dataset_manager.get_suite_sparse_range_path(range.min_nnzs, range.max_nnzs, range.limit),
-    dataset_manager=dataset_manager,
-    flags=flags,
-  )
+    for group in group_list:
+      matrices = ssgetpy.fetch(group=group, limit=yaml_groups_data.limit, dry_run=True)
+      handler = SuiteSparseMatrixHandler(
+        base_path=dataset_manager.get_suite_sparse_group_path(group),
+        dataset_manager=dataset_manager,
+        flags=flags,
+      )
+      for matrix in matrices:
+        if getattr(matrix, 'group', None) != group:
+          continue
+        handler.sync_matrix(matrix)
 
-  for matrix in matrices:
-    handler.sync_matrix(matrix)
+  if config.suite_sparse_matrix_range:
+    range = config.suite_sparse_matrix_range
+
+    matrices = ssgetpy.fetch(nzbounds=(range.min_nnzs, range.max_nnzs), limit=range.limit, dry_run=True)
+    handler = SuiteSparseMatrixHandler(
+      base_path=dataset_manager.get_suite_sparse_range_path(range.min_nnzs, range.max_nnzs, range.limit),
+      dataset_manager=dataset_manager,
+      flags=flags,
+    )
+
+    for matrix in matrices:
+      handler.sync_matrix(matrix)
 

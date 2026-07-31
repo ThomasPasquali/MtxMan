@@ -142,7 +142,6 @@ class ConfigGenerators:
   graph500: Optional[ConfigGraph500] = None
   parmat: Optional[ConfigPaRMAT] = None
 
-
 @dataclass
 class ConfigSuiteSparseRange:
   min_nnzs: int
@@ -150,11 +149,17 @@ class ConfigSuiteSparseRange:
   limit: int
 
 @dataclass
+class ConfigSuiteSparseGroupList:
+  groups: List[str] = field(default_factory=list)
+  limit: Optional[int] = 100 #in ssgetpy there is a default limit of 10 
+
+@dataclass
 class ConfigCategory:
   scratch_path: Path
   generators: Optional[ConfigGenerators] = None
   suite_sparse_matrix_list: Optional[List[Tuple[str, str]]] = field(default_factory=list)
   suite_sparse_matrix_range: Optional[ConfigSuiteSparseRange] = None
+  suite_sparse_group_list: Optional[ConfigSuiteSparseGroupList] = None
   direct_urls: Optional[List[Dict]] = None
 
 
@@ -342,7 +347,21 @@ class DatasetManager:
     path = self.get_category_path() / subfolder
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
-  
+
+
+  def get_suite_sparse_groups_path(self) -> Path:
+    """Returns the path for SuiteSparse parent group directory"""
+    path = self.get_category_path() / "SuiteSparse_groups"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+  def get_suite_sparse_group_path(self, group: str) -> Path:
+    """Returns the path for SuiteSparse matrices selected by group."""
+    subfolder = f"{group}"
+    path = self.get_suite_sparse_groups_path() / subfolder
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
   def get_graph500_path(self, matrix: Graph500Matrix) -> Path:
     """Returns the path for a Graph500 matrix."""
     subfolder = 'Graph500'
@@ -545,6 +564,13 @@ def load_config_file(path: Path) -> Config:
         except TypeError as e:
           raise ConfigurationFormatError(f"[{cat_name}] Invalid 'suite_sparse_matrix_range': {e}")
         
+      suite_groups = None
+      if "suite_sparse_group_list" in cat_data:
+        try:
+          suite_groups = ConfigSuiteSparseGroupList(groups=cat_data["suite_sparse_group_list"]["groups"], limit=cat_data["suite_sparse_group_list"]["limit"])
+        except TypeError as e:
+          raise ConfigurationFormatError(f"[{cat_name}] Invalid 'suite_sparse_group_list': {e}")
+
       suite_list = cat_data.get("suite_sparse_matrix_list", [])
       parsed_suite_list = []
       for m in suite_list:
@@ -563,6 +589,7 @@ def load_config_file(path: Path) -> Config:
         generators=ConfigGenerators(graph500=graph500, parmat=parmat),
         suite_sparse_matrix_list=parsed_suite_list,
         suite_sparse_matrix_range=suite_range,
+        suite_sparse_group_list=suite_groups,
         direct_urls=cat_data.get("direct_urls"),
       )
 

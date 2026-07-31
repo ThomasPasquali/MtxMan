@@ -57,6 +57,8 @@ def sync(
   Synchronizes the matrices configured via '[FILE]'
   """
   config = core.load_config_file(Path(file))
+  # print(config)
+  # return 0
   flags = core.Flags(
     binary_mtx=binary_mtx,
     binary_mtx_double_vals=binary_mtx_double_vals,
@@ -91,7 +93,7 @@ def sync(
       flags=flags,
       dataset_manager=category_datasets_manager
     )
-    suite_sparse_downloader.download_range(
+    suite_sparse_downloader.download_filters(
       config=category_config,
       flags=flags,
       dataset_manager=category_datasets_manager
