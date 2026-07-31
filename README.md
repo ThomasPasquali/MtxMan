@@ -130,6 +130,14 @@ matrices_category_1:
     max_nnzs: 1000
     limit: 4
 
+  # OPTIONAL Specify list of groups to filter matrices by. If specified, only matrices belonging to these groups will be downloaded.
+  # default limit is 100
+  suite_sparse_group_list:
+    groups: 
+      - vanHeukelum
+      - Newman
+    limit: 20
+
   # Configuration for downloading files directly from publicly available URLs
   # Supported archive types: `zip`, `tar`, `tar.gz` (`tgz`)
   # `filename` is REQUIRED. Ensure to include file extension (.mtx or .bmtx)
